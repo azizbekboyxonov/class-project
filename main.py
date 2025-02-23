@@ -2,6 +2,15 @@ import json
 from abc import ABC, abstractmethod
 
 
+class Person:
+    def __init__(self, ism, telefon):
+        self.ism = ism
+        self.telefon = telefon
+
+    def __str__(self):
+        return f"{self.ism} ({self.telefon})"
+
+
 class Transport(ABC):
     def __init__(self, davlat_raqami, egasi):
         self._davlat_raqami = davlat_raqami
@@ -22,9 +31,11 @@ class Mashina(Transport):
     def transport_turi(self):
         return "Mashina"
 
+
 class Motosikl(Transport):
     def transport_turi(self):
         return "Motosikl"
+
 
 class Yuk_Mashina(Transport):
     def transport_turi(self):
@@ -62,9 +73,12 @@ class Avtoturargoh:
                 print(f"{transport.transport_turi()} - {transport.get_davlat_raqami()} - {transport.get_egasi()}")
 
     def malumot_saqlash(self):
-        malumot = [{"turi": t.transport_turi(), "raqami": t.get_davlat_raqami(), "egasi": t.get_egasi()} for t in self.saqlangan_transportlar]
-        with open("avtoturargoh_malumot.json", "w") as f:
-            json.dump(malumot, f)
+        malumot = [
+            {"turi": t.transport_turi(), "raqami": t.get_davlat_raqami(), "egasi": {"ism": t.get_egasi().ism, "telefon": t.get_egasi().telefon}}
+            for t in self.saqlangan_transportlar
+        ]
+        with open("avtoturargoh_malumot.json", "w") as file:
+            json.dump(malumot, file)
 
     def malumot_yuklash(self):
         try:
@@ -72,14 +86,20 @@ class Avtoturargoh:
                 malumot = json.load(f)
                 self.saqlangan_transportlar = []  # Tozalash
                 for t in malumot:
+                    if isinstance(t["egasi"], dict):  # Egasi dictionary ekanligini tekshiramiz
+                        egasi = Person(t["egasi"]["ism"], t["egasi"]["telefon"])
+                    else:
+                        print(f"Xatolik: Noto'g'ri egasi formati: {t['egasi']}")
+                        continue  # Xato bo'lsa, uni o'tkazib yuboramiz
+
                     if t["turi"] == "Mashina":
-                        self.saqlangan_transportlar.append(Mashina(t["raqami"], t["egasi"]))
+                        self.saqlangan_transportlar.append(Mashina(t["raqami"], egasi))
                     elif t["turi"] == "Motosikl":
-                        self.saqlangan_transportlar.append(Motosikl(t["raqami"], t["egasi"]))
+                        self.saqlangan_transportlar.append(Motosikl(t["raqami"], egasi))
                     elif t["turi"] == "Yuk mashina":
-                        self.saqlangan_transportlar.append(Yuk_Mashina(t["raqami"], t["egasi"]))
-        except FileNotFoundError:
-            pass
+                        self.saqlangan_transportlar.append(Yuk_Mashina(t["raqami"], egasi))
+        except (FileNotFoundError, json.JSONDecodeError) as e:
+            print(f"Xatolik: {e}")
 
 
 if __name__ == "__main__":
@@ -95,7 +115,9 @@ if __name__ == "__main__":
         if tanlov == "1":
             turi = input("Transport turi (Mashina/Motosikl/Yuk mashina): ")
             raqam = input("Davlat raqami: ")
-            egasi = input("Egasi: ")
+            ism = input("Egasi ismi: ")
+            telefon = input("Egasi telefon raqami: ")
+            egasi = Person(ism, telefon)
             if turi.lower() == "mashina":
                 avtoturargoh.transport_qoshish(Mashina(raqam, egasi))
             elif turi.lower() == "motosikl":
